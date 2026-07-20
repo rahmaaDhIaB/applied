@@ -12,6 +12,7 @@ node_modules/
 .windsurf/
 AGENTS.md
 CLAUDE.md
+HANDOFF.md
 
 # Build output
 dist/
