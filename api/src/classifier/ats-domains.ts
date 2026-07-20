@@ -39,6 +39,27 @@ export const NON_APPLICATION_DOMAINS: readonly string[] = [
 ];
 
 /**
+ * Build a Gmail search query that surfaces likely job mail and nothing else.
+ *
+ * Why: fetching the 50 most recent emails is mostly newsletters — the real
+ * application mail is buried. Instead we let Gmail do the coarse filter
+ * server-side (cheap, one query) by OR-ing every known ATS sender with the
+ * application keywords. The local classifier still runs afterwards as a second,
+ * finer pass, so anything that slips through is still rejected.
+ */
+export function buildJobSearchQuery(windowDays = 365): string {
+  const fromClauses = ATS_DOMAINS.map((d) => `from:${d}`);
+  const keywordClauses = [
+    'subject:application',
+    'subject:candidature',
+    '"thank you for applying"',
+    '"votre candidature"',
+  ];
+  const ors = [...fromClauses, ...keywordClauses].join(' OR ');
+  return `newer_than:${windowDays}d (${ors})`;
+}
+
+/**
  * True if `email`'s domain is (or ends with) one of `domains`.
  * Using endsWith handles ATS subdomains like `hire.eu.lever.co`.
  */

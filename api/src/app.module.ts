@@ -5,6 +5,7 @@ import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
 import { GmailModule } from './gmail/gmail.module';
+import { SyncModule } from './sync/sync.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { GmailModule } from './gmail/gmail.module';
     PrismaModule,
     AuthModule,
     GmailModule,
+    SyncModule,
   ],
   controllers: [AppController],
   providers: [AppService],
