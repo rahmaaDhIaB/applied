@@ -1,5 +1,10 @@
 generator client {
-  provider = "prisma-client-js"
+  provider = "prisma-client"
+  // v7 requires an explicit output path — the client is generated into our own
+  // source tree instead of hiding inside node_modules.
+  output   = "../generated/prisma"
+  // NestJS compiles to CommonJS, and the generator defaults to ESM.
+  moduleFormat = "cjs"
 }
 
 // Prisma 7 no longer accepts `url` here — the connection string lives in
