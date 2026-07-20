@@ -1,12 +1,34 @@
 services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: applied-postgres
+    ports:
+      - '5432:5432'
+    environment:
+      POSTGRES_USER: applied
+      POSTGRES_PASSWORD: applied
+      POSTGRES_DB: applied
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+    # Lets other tooling wait until Postgres is actually accepting connections,
+    # not just until the container has started.
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U applied']
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
   redis:
     image: redis:7-alpine
     container_name: applied-redis
+    # 6380 on the host because another project (and Memurai) already own 6379.
+    # Inside the container Redis still listens on its default 6379.
     ports:
-      - '6379:6379'
+      - '6380:6379'
     volumes:
       - redis-data:/data
     command: redis-server --appendonly yes
 
 volumes:
   redis-data:
+  pg-data:
