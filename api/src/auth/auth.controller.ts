@@ -32,11 +32,11 @@ export class AuthController {
 
     const user = await this.authService.handleGoogleCallback(code);
 
-    // For now, just prove it worked. Later this redirects to the frontend with
-    // a session. Seeing your own email here means the whole dance succeeded.
-    res.json({
-      message: 'Gmail connected',
-      user: { id: user.id, email: user.email },
-    });
+    // Close the loop: send the user back to the frontend, carrying their id so
+    // the dashboard can load their applications. (A real app would set a signed
+    // session cookie here instead of passing the id in the URL — noted as the
+    // next hardening step.)
+    const webOrigin = process.env.WEB_ORIGIN ?? 'http://localhost:3000';
+    res.redirect(`${webOrigin}/?userId=${encodeURIComponent(user.id)}`);
   }
 }
