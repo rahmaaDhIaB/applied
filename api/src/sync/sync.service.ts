@@ -98,17 +98,22 @@ export class SyncService {
     outcome.jobRelated = true;
 
     // Resolve which company this belongs to. Prefer the name pulled from the
-    // subject; fall back to the sender's domain.
-    const companyName =
-      classification.company ?? email.fromName ?? email.fromEmail;
-    const companyKey =
-      (classification.company
-        ? companyKeyFromName(classification.company)
-        : null) ??
-      companyKeyFromEmail(email.fromEmail) ??
-      companyKeyFromName(companyName);
+    // subject; else the sender's own domain (only if it's a company domain, not
+    // an ATS). We deliberately do NOT fall back to the sender's display name —
+    // that's usually the ATS ("SmartRecruiters"), which would create a bogus
+    // application. Better to leave the email job-related-but-unmatched.
+    let companyName = classification.company;
+    let companyKey = companyName ? companyKeyFromName(companyName) : null;
 
-    if (!companyKey) return outcome;
+    if (!companyKey) {
+      const fromDomain = companyKeyFromEmail(email.fromEmail);
+      if (fromDomain) {
+        companyKey = fromDomain;
+        companyName = fromDomain;
+      }
+    }
+
+    if (!companyKey || !companyName) return outcome;
 
     const application = await this.findOrCreateApplication(
       userId,

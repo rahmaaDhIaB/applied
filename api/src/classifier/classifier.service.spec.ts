@@ -135,5 +135,38 @@ describe('ClassifierService', () => {
       );
       expect(r.company).toBe('n8n');
     });
+
+    it('cuts the role off after a slash when anchored by a pipe', () => {
+      const r = svc.classify(
+        email({
+          fromEmail: 'notification@smartrecruiters.com',
+          subject: 'WEBQAM Groupe/Développeur(euse) | Votre candidature',
+        }),
+      );
+      expect(r.company).toBe('WEBQAM Groupe');
+    });
+
+    it('returns null for a bare subject with no company anchor', () => {
+      // No "applying to", no "candidature chez", no pipe -> we do NOT guess,
+      // because guessing turns "Thank you for applying" into a fake company.
+      const r = svc.classify(
+        email({ fromEmail: 'notification@smartrecruiters.com', subject: 'Quelques questions' }),
+      );
+      expect(r.company).toBeNull();
+    });
+
+    it('drops recruiting-team boilerplate', () => {
+      const r = svc.classify(
+        email({ fromEmail: 'no-reply@join.com', subject: 'Your application at Local Brand X Recruiting Team' }),
+      );
+      expect(r.company).toBe('Local Brand X');
+    });
+
+    it('never returns the ATS platform name as the company', () => {
+      const r = svc.classify(
+        email({ fromEmail: 'notification@smartrecruiters.com', subject: 'SmartRecruiters | Your one-time-passcode' }),
+      );
+      expect(r.company).toBeNull();
+    });
   });
 });

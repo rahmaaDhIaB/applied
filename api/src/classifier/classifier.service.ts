@@ -182,7 +182,13 @@ export class ClassifierService {
    *   "Thank you for applying to TomTom"
    *   "Thank you for your application to Theodo!"
    *   "Votre candidature chez Vigie"
+   *   "Your application at Local Brand X"
    *   "n8n | We've received your application"   (company before a pipe)
+   *
+   * The tricky part is that subjects smuggle in the ROLE and marketing fluff:
+   *   "WEBQAM Groupe/Développeur(euse)"      -> company is "WEBQAM Groupe"
+   *   "PARLYM – Quelques questions"          -> company is "PARLYM"
+   * so once we have a candidate we cut it at the first separator.
    */
   private extractCompany(email: ClassifiableEmail): string | null {
     const subject = email.subject.trim();
@@ -190,23 +196,55 @@ export class ClassifierService {
     const patterns = [
       /applying to\s+(.+?)[!.\n]*$/i,
       /application to\s+(.+?)[!.\n]*$/i,
-      /candidature (?:chez|au sein de|pour)\s+(.+?)[!.\n]*$/i,
+      /application at\s+(.+?)[!.\n]*$/i,
+      /candidature (?:chez|au sein de|pour|à)\s+(.+?)[!.\n]*$/i,
     ];
     for (const re of patterns) {
       const m = subject.match(re);
-      if (m) return this.cleanCompany(m[1]);
+      if (m) {
+        const c = this.cleanCompany(m[1]);
+        if (c) return c;
+      }
     }
 
     // "Company | subject line" — the ATS puts the company before a pipe.
     if (subject.includes('|')) {
-      const before = subject.split('|')[0].trim();
-      if (before && before.length <= 40) return this.cleanCompany(before);
+      const before = this.cleanCompany(subject.split('|')[0]);
+      if (before && before.length <= 40) return before;
     }
 
     return null;
   }
 
-  private cleanCompany(raw: string): string {
-    return raw.replace(/[!.,]+$/, '').trim();
+  /**
+   * Trim a raw company candidate down to just the company:
+   *  - cut at the first role/subject separator (/, –, —, :, comma)
+   *  - drop trailing punctuation
+   *  - drop generic recruiting words ("Recruiting Team", "Talent")
+   *  - reject the result if it's actually the ATS's own name
+   */
+  private cleanCompany(raw: string): string | null {
+    let c = raw
+      .split(/[/–—:,]/)[0] // "WEBQAM Groupe/Développeur" -> "WEBQAM Groupe"
+      .replace(/[!.\s]+$/, '')
+      .replace(/\b(recruit(ing|ment)?|talent|team|hr|grh|careers?)\b.*$/i, '')
+      .trim();
+
+    if (!c) return null;
+
+    // Never treat the ATS platform itself as the employer.
+    const ATS_NAMES = [
+      'smartrecruiters',
+      'lever',
+      'greenhouse',
+      'ashby',
+      'workable',
+      'workday',
+      'teamtailor',
+      'recruitee',
+    ];
+    if (ATS_NAMES.includes(c.toLowerCase().replace(/\s+/g, ''))) return null;
+
+    return c;
   }
 }
